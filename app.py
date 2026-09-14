@@ -4,7 +4,7 @@ import json
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_change_me'
 
-# بيانات الدخول (يمكنك تعديلها هنا)
+# بيانات الدخول
 ADMIN_USER = "admin"
 ADMIN_PASSWORD = "admin123"
 
@@ -23,7 +23,6 @@ accounts = [
     }
 ]
 
-# قالب صفحة تسجيل الدخول (مع حقل اسم المستخدم)
 LOGIN_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -67,7 +66,6 @@ LOGIN_TEMPLATE = '''
 </html>
 '''
 
-# قالب لوحة التحكم الرئيسي
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -134,10 +132,10 @@ HTML_TEMPLATE = '''
                 ipInput.value = "104.18.38.8";
                 hostInput.value = "portal.mobily.com.sa";
             } else if (selectedValue.includes("زين")) {
-                ipInput.value = "";
+                ipInput.value = "104.18.8.7";
                 hostInput.value = "speedtest.zain.com";
             } else if (selectedValue.includes("فيرجين")) {
-                ipInput.value = "";
+                ipInput.value = "104.18.40.1";
                 hostInput.value = "virginmobile.sa";
             }
         }
@@ -148,7 +146,7 @@ HTML_TEMPLATE = '''
         <div class="header">
             <div>
                 <h1>لوحة سيطرة VLESS</h1>
-                <p>محمية باسم مستخدم وكلمة مرور</p>
+                <p>محدثة مع هوستات زين وفيبرجين التلقائية</p>
             </div>
             <a href="/logout" class="logout-btn">🚪 خروج</a>
         </div>
