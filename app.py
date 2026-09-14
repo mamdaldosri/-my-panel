@@ -50,7 +50,7 @@ def save_accounts(accounts):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(accounts, f, ensure_ascii=False, indent=4)
 
-# تحميل حسابات SSH WebSocket
+# تحميل حسابات SSH WebSocket (محدثة بالبيانات الجديدة من الصورة والطلبات)
 def load_ssh_accounts():
     if os.path.exists(SSH_DB_FILE):
         with open(SSH_DB_FILE, "r", encoding="utf-8") as f:
@@ -61,13 +61,15 @@ def load_ssh_accounts():
     default_ssh = [
         {
             "id": 1,
-            "username": "France-Weekly-SSH",
+            "username": "France-Weekly-SSH-Adminlor01",
             "country": "🇫🇷 فرنسا (Paris)",
             "host": "de1.wssht.to",
             "port": "443",
             "ssh_user": "sshocean-adminlor01",
             "ssh_pass": "adminlor01",
-            "payload": "GET / HTTP/1.1[crlf]Host: speedtest.zain.com[crlf]Upgrade: websocket[crlf][crlf]",
+            "expiry": "22 Sep 2026",
+            "payload": "GET / HTTP/1.1[crlf]Host: de1.wssht.to[crlf]Upgrade: websocket[crlf][crlf]",
+            "wss_payload": "GET wss://SNI_bug_host/ HTTP/1.1[crlf]Host: de1.wssht.to[crlf]Upgrade: Websocket[crlf]Connection: Keep-Alive[crlf][crlf]",
             "carrier": "⚡ زين Zain",
             "status": "نشط"
         }
@@ -132,7 +134,7 @@ HTML_TEMPLATE = '''
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #0f172a; color: #f8fafc; padding: 15px; }
-        .container { max-width: 600px; margin: auto; }
+        .container { max-width: 650px; margin: auto; }
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .header h1 { font-size: 20px; font-weight: bold; color: #38bdf8; margin-bottom: 3px; }
@@ -166,13 +168,14 @@ HTML_TEMPLATE = '''
         .badge-status-inactive { background: #ef444420; color: #ef4444; border: 1px solid #ef444440; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
         
         .info-grid { font-size: 12px; color: #94a3b8; line-height: 1.8; }
-        .info-grid span { color: #f1f5f9; }
+        .info-grid span { color: #f1f5f9; font-family: monospace; }
         
-        .actions-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 6px; margin-top: 10px; }
+        .payload-display { background: #0f172a; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #38bdf8; word-break: break-all; margin-top: 5px; border: 1px solid #334155; }
+        
+        .actions-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
         .action-btn { padding: 8px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 11px; text-align: center; border: 1px solid #475569; text-decoration: none; }
         .btn-copy { background: #334155; color: #38bdf8; }
         .btn-toggle { background: #3b82f620; color: #3b82f6; border-color: #3b82f640; }
-        .btn-edit { background: #f59e0b20; color: #f59e0b; border-color: #f59e0b40; }
         .btn-delete { background: #ef444420; color: #ef4444; border-color: #ef444440; }
         
         .section-title { color: #38bdf8; font-size: 16px; margin: 25px 0 10px 0; border-bottom: 1px solid #334155; padding-bottom: 5px; }
@@ -187,6 +190,12 @@ HTML_TEMPLATE = '''
                 return (c=='x' ? r : (r&0x3|0x8)).toString(16);
             });
             document.getElementById("uuidInput").value = uuid;
+        }
+        function copyTextById(id) {
+            const text = document.getElementById(id).innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('تم النسخ بنجاح! ✅');
+            });
         }
     </script>
 </head>
@@ -271,7 +280,7 @@ HTML_TEMPLATE = '''
             <button type="submit" class="btn-primary">حفظ وربط سيرفر VLESS</button>
         </form>
 
-        <!-- قسم 2: إضافة سيرفر SSH WebSocket جديد (الأسبوعي) -->
+        <!-- قسم 2: إضافة سيرفر SSH WebSocket جديد -->
         <form action="/add-ssh" method="POST" class="form-card" style="border-color: #3b82f6;">
             <h3 style="margin-bottom: 12px; font-size: 15px; color: #3b82f6;">+ إضافة سيرفر SSH WebSocket (الأسبوعي)</h3>
             
@@ -297,13 +306,13 @@ HTML_TEMPLATE = '''
 
             <div class="form-group">
                 <label>اسم الحساب / السيرفر:</label>
-                <input type="text" name="username" class="form-control" placeholder="مثال: France-Weekly-SSH" required>
+                <input type="text" name="username" class="form-control" value="France-Weekly-SSH-Adminlor01" required>
             </div>
 
             <div class="row-group">
                 <div class="form-group">
                     <label>Host / IP:</label>
-                    <input type="text" name="host" class="form-control" placeholder="de1.wssht.to" required>
+                    <input type="text" name="host" class="form-control" value="de1.wssht.to" required>
                 </div>
                 <div class="form-group">
                     <label>Port:</label>
@@ -314,17 +323,27 @@ HTML_TEMPLATE = '''
             <div class="row-group">
                 <div class="form-group">
                     <label>Username:</label>
-                    <input type="text" name="ssh_user" class="form-control" placeholder="sshocean-..." required>
+                    <input type="text" name="ssh_user" class="form-control" value="sshocean-adminlor01" required>
                 </div>
                 <div class="form-group">
                     <label>Password:</label>
-                    <input type="text" name="ssh_pass" class="form-control" placeholder="adminlor01" required>
+                    <input type="text" name="ssh_pass" class="form-control" value="adminlor01" required>
                 </div>
+            </div>
+            
+            <div class="form-group">
+                <label>تاريخ الانتهاء:</label>
+                <input type="text" name="expiry" class="form-control" value="22 Sep 2026" required>
             </div>
 
             <div class="form-group">
-                <label>Payload (HTTP / TLS):</label>
-                <textarea name="payload" class="form-control" rows="2" placeholder="الصق البيلود هنا..." required></textarea>
+                <label>Payload (HTTP):</label>
+                <textarea name="payload" class="form-control" rows="2" required>GET / HTTP/1.1[crlf]Host: de1.wssht.to[crlf]Upgrade: websocket[crlf][crlf]</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Payload (WSS / TLS):</label>
+                <textarea name="wss_payload" class="form-control" rows="2" required>GET wss://SNI_bug_host/ HTTP/1.1[crlf]Host: de1.wssht.to[crlf]Upgrade: Websocket[crlf]Connection: Keep-Alive[crlf][crlf]</textarea>
             </div>
 
             <button type="submit" class="btn-primary" style="background: #3b82f6;">حفظ سيرفر SSH WebSocket</button>
@@ -347,18 +366,17 @@ HTML_TEMPLATE = '''
                 <div>Host: <span>{{ acc.host }}</span></div>
                 <div>UUID: <span>{{ acc.uuid }}</span></div>
             </div>
-            <div class="actions-row">
+            <div class="actions-row" style="grid-template-columns: repeat(3, 1fr);">
                 <button class="action-btn btn-copy" onclick="navigator.clipboard.writeText('{{ acc.config }}'); alert('تم نسخ الرابط!');">
-                    📋 نسخ
+                    📋 نسخ الرابط
                 </button>
                 <a href="/toggle/{{ acc.id }}" class="action-btn btn-toggle">🔄 الحالة</a>
-                <a href="/edit/{{ acc.id }}" class="action-btn btn-edit">✏️ تعديل</a>
                 <a href="/delete/{{ acc.id }}" class="action-btn btn-delete" onclick="return confirm('حذف هذا السيرفر؟');">🗑️ حذف</a>
             </div>
         </div>
         {% endfor %}
 
-        <!-- قائمة سيرفرات SSH WebSocket -->
+        <!-- قائمة سيرفرات SSH WebSocket الدائمة مع بيانات الصورة -->
         <div class="section-title" style="color: #3b82f6;">🔐 قائمة سيرفرات SSH WebSocket الأسبوعية</div>
         {% for ssh in ssh_accounts %}
         <div class="account-card" style="border-color: #3b82f640;">
@@ -371,13 +389,22 @@ HTML_TEMPLATE = '''
                 <span class="badge-status-active">{{ ssh.status }}</span>
             </div>
             <div class="info-grid">
-                <div>Host: <span>{{ ssh.host }} (Port: {{ ssh.port }})</span></div>
-                <div>User: <span>{{ ssh.ssh_user }}</span></div>
-                <div>Pass: <span>{{ ssh.ssh_pass }}</span></div>
+                <div>Hostname: <span id="shost_{{ ssh.id }}">{{ ssh.host }}</span></div>
+                <div>Port: <span>{{ ssh.port }}</span></div>
+                <div>Username: <span id="suser_{{ ssh.id }}">{{ ssh.ssh_user }}</span></div>
+                <div>Password: <span id="spass_{{ ssh.id }}">{{ ssh.ssh_pass }}</span></div>
+                <div>الانتهاء: <span style="color: #f59e0b;">{{ ssh.expiry }}</span></div>
+                
+                <div style="margin-top: 6px;">Payload (HTTP):</div>
+                <div class="payload-display" id="sp1_{{ ssh.id }}">{{ ssh.payload }}</div>
+
+                <div style="margin-top: 6px;">Payload (WSS):</div>
+                <div class="payload-display" id="sp2_{{ ssh.id }}">{{ ssh.wss_payload }}</div>
             </div>
-            <div class="actions-row" style="grid-template-columns: 2fr 1fr 1fr;">
-                <button class="action-btn btn-copy" style="background:#3b82f6; color:#fff;" onclick="navigator.clipboard.writeText(`Host: {{ ssh.host }}\nPort: {{ ssh.port }}\nUser: {{ ssh.ssh_user }}\nPass: {{ ssh.ssh_pass }}\nPayload:\n{{ ssh.payload }}`); alert('تم نسخ بيانات SSH الكاملة!');">
-                    📋 نسخ بيانات SSH كاملة
+            
+            <div class="actions-row" style="grid-template-columns: repeat(3, 1fr);">
+                <button class="action-btn btn-copy" style="background:#3b82f6; color:#fff;" onclick="navigator.clipboard.writeText(`Host: {{ ssh.host }}\nPort: {{ ssh.port }}\nUsername: {{ ssh.ssh_user }}\nPassword: {{ ssh.ssh_pass }}\nExpiry: {{ ssh.expiry }}\n--- HTTP Payload ---\n{{ ssh.payload }}\n--- WSS Payload ---\n{{ ssh.wss_payload }}`); alert('تم نسخ كامل بيانات SSH والـ Payloads بنجاح!');">
+                    📋 نسخ البيانات كاملة
                 </button>
                 <a href="/toggle-ssh/{{ ssh.id }}" class="action-btn btn-toggle">🔄 الحالة</a>
                 <a href="/delete-ssh/{{ ssh.id }}" class="action-btn btn-delete" onclick="return confirm('حذف هذا السيرفر؟');">🗑️ حذف</a>
@@ -401,82 +428,6 @@ HTML_TEMPLATE = '''
             </form>
         </div>
 
-    </div>
-</body>
-</html>
-'''
-
-EDIT_TEMPLATE = '''
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تعديل سيرفر VLESS</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: #0f172a; color: #f8fafc; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .container { width: 100%; max-width: 500px; }
-        .form-card { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; }
-        .form-group { margin-bottom: 12px; text-align: right; }
-        .form-group label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px; }
-        .form-control, .form-select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 14px; }
-        .btn-primary { background: #06b6d4; color: #fff; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 10px; }
-        .btn-back { display: block; text-align: center; margin-top: 10px; color: #94a3b8; text-decoration: none; font-size: 13px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <form action="/edit/{{ account.id }}" method="POST" class="form-card">
-            <h3 style="margin-bottom: 15px; font-size: 18px; color: #38bdf8; text-align: right;">✏️ تعديل إعدادات السيرفر</h3>
-            
-            <div class="form-group">
-                <label>اسم الحساب:</label>
-                <input type="text" name="username" class="form-control" value="{{ account.username }}" required>
-            </div>
-
-            <div class="form-group">
-                <label>الدولة:</label>
-                <select name="country" class="form-select">
-                    <option value="{{ account.country }}" selected>{{ account.country }} (الحالي)</option>
-                    <option value="🇩🇪 ألمانيا (Frankfurt)">🇩🇪 ألمانيا (Frankfurt)</option>
-                    <option value="🇫🇷 فرنسا (Paris)">🇫🇷 فرنسا (Paris)</option>
-                    <option value="🇳🇱 هولندا (Amsterdam)">🇳🇱 هولندا (Amsterdam)</option>
-                    <option value="🇺🇸 أمريكا (New York)">🇺🇸 أمريكا (New York)</option>
-                    <option value="🇸🇬 سنغافورة (Singapore)">🇸🇬 سنغافورة (Singapore)</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>الشبكة:</label>
-                <select name="carrier" class="form-select">
-                    <option value="{{ account.carrier }}" selected>{{ account.carrier }} (الحالي)</option>
-                    <option value="⚡ زين Zain">⚡ زين Zain</option>
-                    <option value="🇸🇦 سوا STC">🇸🇦 سوا STC</option>
-                    <option value="🇸🇦 جوي Jawwy">🇸🇦 جوي Jawwy</option>
-                    <option value="📱 موبايلي Mobily">📱 موبايلي Mobily</option>
-                    <option value="🟣 فيرجن Virgin">🟣 فيرجن Virgin</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>عنوان السيرفر (IP):</label>
-                <input type="text" name="ip" class="form-control" value="{{ account.server_ip }}" required>
-            </div>
-
-            <div class="form-group">
-                <label>الهوست (Host):</label>
-                <input type="text" name="host" class="form-control" value="{{ account.host }}" required>
-            </div>
-
-            <div class="form-group">
-                <label>المعرّف (UUID):</label>
-                <input type="text" name="uuid" class="form-control" value="{{ account.uuid }}" required>
-            </div>
-
-            <button type="submit" class="btn-primary">حفظ التعديلات</button>
-            <a href="/" class="btn-back">إلغاء والعودة للرئيسية</a>
-        </form>
     </div>
 </body>
 </html>
@@ -588,7 +539,9 @@ def add_ssh_account():
     port = request.form.get('port', '443')
     ssh_user = request.form.get('ssh_user')
     ssh_pass = request.form.get('ssh_pass')
+    expiry = request.form.get('expiry', '22 Sep 2026')
     payload = request.form.get('payload')
+    wss_payload = request.form.get('wss_payload')
     country = request.form.get('country', '🇫🇷 فرنسا (Paris)')
     carrier = request.form.get('carrier', '⚡ زين Zain')
     
@@ -603,7 +556,9 @@ def add_ssh_account():
             "port": port,
             "ssh_user": ssh_user,
             "ssh_pass": ssh_pass,
+            "expiry": expiry,
             "payload": payload,
+            "wss_payload": wss_payload,
             "carrier": carrier,
             "status": "نشط"
         })
@@ -649,29 +604,6 @@ def toggle_ssh_status(acc_id):
             acc['status'] = "معطل" if acc['status'] == "نشط" else "نشط"
     save_ssh_accounts(ssh_accounts)
     return redirect(url_for('home'))
-
-@app.route('/edit/<int:acc_id>', methods=['GET', 'POST'])
-def edit_account(acc_id):
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    accounts = load_accounts()
-    account = next((acc for acc in accounts if acc['id'] == acc_id), None)
-    
-    if not account:
-        return redirect(url_for('home'))
-        
-    if request.method == 'POST':
-        account['username'] = request.form.get('username')
-        account['country'] = request.form.get('country')
-        account['carrier'] = request.form.get('carrier')
-        account['server_ip'] = request.form.get('ip')
-        account['host'] = request.form.get('host')
-        account['uuid'] = request.form.get('uuid')
-        account['config'] = f"vless://{account['uuid']}@{account['server_ip']}:443?type=ws&security=tls&host={account['host']}#{account['username']}"
-        save_accounts(accounts)
-        return redirect(url_for('home'))
-        
-    return render_template_string(EDIT_TEMPLATE, account=account)
 
 @app.route('/update-credentials', methods=['POST'])
 def update_credentials():
