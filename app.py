@@ -7,6 +7,7 @@ app = Flask(__name__)
 app.secret_key = 'super_secret_key_change_me_very_secure'
 
 DB_FILE = "database.json"
+SSH_DB_FILE = "ssh_database.json"
 CRED_FILE = "credentials.json"
 
 # تحميل بيانات الاعتماد الافتراضية
@@ -20,7 +21,7 @@ def save_credentials(creds):
     with open(CRED_FILE, "w", encoding="utf-8") as f:
         json.dump(creds, f, ensure_ascii=False, indent=4)
 
-# تحميل الحسابات من الملف الدائم
+# تحميل حسابات VLESS
 def load_accounts():
     if os.path.exists(DB_FILE):
         with open(DB_FILE, "r", encoding="utf-8") as f:
@@ -28,7 +29,6 @@ def load_accounts():
                 return json.load(f)
             except:
                 return []
-    # الحساب الافتراضي في حال عدم وجود ملف
     default_accounts = [
         {
             "id": 1,
@@ -50,13 +50,42 @@ def save_accounts(accounts):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(accounts, f, ensure_ascii=False, indent=4)
 
+# تحميل حسابات SSH WebSocket
+def load_ssh_accounts():
+    if os.path.exists(SSH_DB_FILE):
+        with open(SSH_DB_FILE, "r", encoding="utf-8") as f:
+            try:
+                return json.load(f)
+            except:
+                return []
+    default_ssh = [
+        {
+            "id": 1,
+            "username": "France-Weekly-SSH",
+            "country": "🇫🇷 فرنسا (Paris)",
+            "host": "de1.wssht.to",
+            "port": "443",
+            "ssh_user": "sshocean-adminlor01",
+            "ssh_pass": "adminlor01",
+            "payload": "GET / HTTP/1.1[crlf]Host: speedtest.zain.com[crlf]Upgrade: websocket[crlf][crlf]",
+            "carrier": "⚡ زين Zain",
+            "status": "نشط"
+        }
+    ]
+    save_ssh_accounts(default_ssh)
+    return default_ssh
+
+def save_ssh_accounts(accounts):
+    with open(SSH_DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(accounts, f, ensure_ascii=False, indent=4)
+
 LOGIN_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - لوحة VLESS الاحترافية</title>
+    <title>تسجيل الدخول - لوحة السيطرة الشاملة</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; height: 100vh; padding: 15px; }
@@ -73,7 +102,7 @@ LOGIN_TEMPLATE = '''
 <body>
     <div class="login-card">
         <h2>تسجيل الدخول للوحة</h2>
-        <p>أدخل بيانات الحساب للوصول إلى إدارة السيرفرات</p>
+        <p>أدخل بيانات الحساب للوصول إلى إدارة السيرفرات الشاملة</p>
         {% if error %}
         <div class="error">{{ error }}</div>
         {% endif %}
@@ -99,7 +128,7 @@ HTML_TEMPLATE = '''
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة سيطرة VLESS المتكاملة</title>
+    <title>لوحة سيطرة VLESS & SSH الشاملة</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #0f172a; color: #f8fafc; padding: 15px; }
@@ -117,7 +146,7 @@ HTML_TEMPLATE = '''
         .sub-box label { font-size: 12px; color: #38bdf8; display: block; margin-bottom: 5px; font-weight: bold; }
         .sub-input { width: 100%; padding: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 12px; margin-bottom: 8px; }
         
-        .form-card, .settings-card { background: #1e293b; padding: 15px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 20px; }
+        .form-card, .settings-card, .account-card { background: #1e293b; padding: 15px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 20px; }
         .form-group { margin-bottom: 10px; text-align: right; }
         .form-group label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px; }
         .form-control, .form-select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 14px; }
@@ -129,7 +158,6 @@ HTML_TEMPLATE = '''
         
         .btn-uuid { background: #334155; color: #38bdf8; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; float: left; font-weight: bold; }
 
-        .account-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 15px; margin-bottom: 12px; text-align: right; }
         .account-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .account-title { font-weight: bold; font-size: 15px; color: #38bdf8; }
         .badge-carrier { background: #3b82f620; color: #3b82f6; border: 1px solid #3b82f640; padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; margin-right: 5px; }
@@ -146,41 +174,19 @@ HTML_TEMPLATE = '''
         .btn-toggle { background: #3b82f620; color: #3b82f6; border-color: #3b82f640; }
         .btn-edit { background: #f59e0b20; color: #f59e0b; border-color: #f59e0b40; }
         .btn-delete { background: #ef444420; color: #ef4444; border-color: #ef444440; }
+        
+        .section-title { color: #38bdf8; font-size: 16px; margin: 25px 0 10px 0; border-bottom: 1px solid #334155; padding-bottom: 5px; }
     </style>
     
     <script>
-        function updateNetworkData(prefix = '') {
-            var carrierSelect = document.getElementById(prefix + "carrierSelect");
-            var ipInput = document.getElementById(prefix + "ipInput");
-            var hostInput = document.getElementById(prefix + "hostInput");
-            var selectedCarrier = carrierSelect.value;
-            
-            if (selectedCarrier.includes("سوا")) {
-                ipInput.value = "172.65.90.47";
-                hostInput.value = "m.youtube.com";
-            } else if (selectedCarrier.includes("جوي")) {
-                ipInput.value = "104.16.120.28";
-                hostInput.value = "jawwy.sa";
-            } else if (selectedCarrier.includes("موبايلي")) {
-                ipInput.value = "104.18.38.8";
-                hostInput.value = "portal.mobily.com.sa";
-            } else if (selectedCarrier.includes("زين")) {
-                ipInput.value = "104.18.8.7";
-                hostInput.value = "speedtest.zain.com";
-            } else if (selectedCarrier.includes("فيرجين")) {
-                ipInput.value = "104.18.40.1";
-                hostInput.value = "virginmobile.sa";
-            }
-        }
-
-        function generateUUID(prefix = '') {
+        function generateUUID() {
             var d = new Date().getTime();
             var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
                 var r = (d + Math.random()*16)%16 | 0;
                 d = Math.floor(d/16);
                 return (c=='x' ? r : (r&0x3|0x8)).toString(16);
             });
-            document.getElementById(prefix + "uuidInput").value = uuid;
+            document.getElementById("uuidInput").value = uuid;
         }
     </script>
 </head>
@@ -188,8 +194,8 @@ HTML_TEMPLATE = '''
     <div class="container">
         <div class="header">
             <div>
-                <h1>لوحة سيطرة VLESS</h1>
-                <p>إجمالي السيرفرات: <span style="color:#38bdf8; font-weight:bold;">{{ accounts|length }}</span></p>
+                <h1>لوحة السيطرة الشاملة</h1>
+                <p>سيرفرات VLESS: <span style="color:#38bdf8; font-weight:bold;">{{ accounts|length }}</span> | سيرفرات SSH: <span style="color:#38bdf8; font-weight:bold;">{{ ssh_accounts|length }}</span></p>
             </div>
             <a href="/logout" class="logout-btn">🚪 خروج</a>
         </div>
@@ -202,7 +208,7 @@ HTML_TEMPLATE = '''
         </div>
 
         <div class="sub-box">
-            <label>🔗 رابط الاشتراك (مباشر للتطبيقات):</label>
+            <label>🔗 رابط الاشتراك (VLESS مباشر):</label>
             <input type="text" class="sub-input" readonly value="{{ request.url_root }}sub" id="subLink">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                 <button class="action-btn btn-copy" style="background:#0891b2; color:#fff;" onclick="navigator.clipboard.writeText(document.getElementById('subLink').value); alert('تم نسخ رابط الاشتراك!');">
@@ -214,9 +220,9 @@ HTML_TEMPLATE = '''
             </div>
         </div>
 
-        <!-- نموذج إضافة حساب جديد -->
+        <!-- قسم 1: إضافة سيرفر VLESS جديد -->
         <form action="/add" method="POST" class="form-card">
-            <h3 style="margin-bottom: 12px; font-size: 15px; color: #38bdf8;">+ إضافة سيرفر خارجي جديد</h3>
+            <h3 style="margin-bottom: 12px; font-size: 15px; color: #38bdf8;">+ إضافة سيرفر VLESS جديد</h3>
             
             <div class="row-group">
                 <div class="form-group">
@@ -232,7 +238,7 @@ HTML_TEMPLATE = '''
 
                 <div class="form-group">
                     <label>الشبكة (الهوست):</label>
-                    <select name="carrier" id="carrierSelect" class="form-select" onchange="updateNetworkData('')">
+                    <select name="carrier" class="form-select">
                         <option value="⚡ زين Zain">⚡ زين Zain</option>
                         <option value="🇸🇦 سوا STC">🇸🇦 سوا STC</option>
                         <option value="🇸🇦 جوي Jawwy">🇸🇦 جوي Jawwy</option>
@@ -249,23 +255,83 @@ HTML_TEMPLATE = '''
             
             <div class="form-group">
                 <label>عنوان السيرفر (IP أو CDN):</label>
-                <input type="text" name="ip" id="ipInput" class="form-control" value="104.18.8.7" required>
+                <input type="text" name="ip" class="form-control" value="104.18.8.7" required>
             </div>
 
             <div class="form-group">
                 <label>الهوست (Host / Bug):</label>
-                <input type="text" name="host" id="hostInput" class="form-control" value="speedtest.zain.com" required>
+                <input type="text" name="host" class="form-control" value="speedtest.zain.com" required>
             </div>
 
             <div class="form-group">
-                <label>المعرّف (UUID): <button type="button" class="btn-uuid" onclick="generateUUID('')">🎲 توليد</button></label>
+                <label>المعرّف (UUID): <button type="button" class="btn-uuid" onclick="generateUUID()">🎲 توليد</button></label>
                 <input type="text" name="uuid" id="uuidInput" class="form-control" placeholder="12345678-abcd..." required>
             </div>
 
-            <button type="submit" class="btn-primary">حفظ وربط السيرفر</button>
+            <button type="submit" class="btn-primary">حفظ وربط سيرفر VLESS</button>
         </form>
 
-        <!-- قائمة السيرفرات -->
+        <!-- قسم 2: إضافة سيرفر SSH WebSocket جديد (الأسبوعي) -->
+        <form action="/add-ssh" method="POST" class="form-card" style="border-color: #3b82f6;">
+            <h3 style="margin-bottom: 12px; font-size: 15px; color: #3b82f6;">+ إضافة سيرفر SSH WebSocket (الأسبوعي)</h3>
+            
+            <div class="row-group">
+                <div class="form-group">
+                    <label>الدولة:</label>
+                    <select name="country" class="form-select">
+                        <option value="🇫🇷 فرنسا (Paris)">🇫🇷 فرنسا (Paris)</option>
+                        <option value="🇩🇪 ألمانيا (Frankfurt)">🇩🇪 ألمانيا (Frankfurt)</option>
+                        <option value="🇳🇱 هولندا (Amsterdam)">🇳🇱 هولندا (Amsterdam)</option>
+                        <option value="🇺🇸 أمريكا (New York)">🇺🇸 أمريكا (New York)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>الشبكة:</label>
+                    <select name="carrier" class="form-select">
+                        <option value="⚡ زين Zain">⚡ زين Zain</option>
+                        <option value="🇸🇦 سوا STC">🇸🇦 سوا STC</option>
+                        <option value="🇸🇦 جوي Jawwy">🇸🇦 جوي Jawwy</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>اسم الحساب / السيرفر:</label>
+                <input type="text" name="username" class="form-control" placeholder="مثال: France-Weekly-SSH" required>
+            </div>
+
+            <div class="row-group">
+                <div class="form-group">
+                    <label>Host / IP:</label>
+                    <input type="text" name="host" class="form-control" placeholder="de1.wssht.to" required>
+                </div>
+                <div class="form-group">
+                    <label>Port:</label>
+                    <input type="text" name="port" class="form-control" value="443" required>
+                </div>
+            </div>
+
+            <div class="row-group">
+                <div class="form-group">
+                    <label>Username:</label>
+                    <input type="text" name="ssh_user" class="form-control" placeholder="sshocean-..." required>
+                </div>
+                <div class="form-group">
+                    <label>Password:</label>
+                    <input type="text" name="ssh_pass" class="form-control" placeholder="adminlor01" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Payload (HTTP / TLS):</label>
+                <textarea name="payload" class="form-control" rows="2" placeholder="الصق البيلود هنا..." required></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary" style="background: #3b82f6;">حفظ سيرفر SSH WebSocket</button>
+        </form>
+
+        <!-- قائمة سيرفرات VLESS -->
+        <div class="section-title">🌐 قائمة سيرفرات VLESS</div>
         {% for acc in accounts %}
         <div class="account-card">
             <div class="account-header">
@@ -285,15 +351,36 @@ HTML_TEMPLATE = '''
                 <button class="action-btn btn-copy" onclick="navigator.clipboard.writeText('{{ acc.config }}'); alert('تم نسخ الرابط!');">
                     📋 نسخ
                 </button>
-                <a href="/toggle/{{ acc.id }}" class="action-btn btn-toggle">
-                    🔄 الحالة
-                </a>
-                <a href="/edit/{{ acc.id }}" class="action-btn btn-edit">
-                    ✏️ تعديل
-                </a>
-                <a href="/delete/{{ acc.id }}" class="action-btn btn-delete" onclick="return confirm('حذف هذا السيرفر؟');">
-                    🗑️ حذف
-                </a>
+                <a href="/toggle/{{ acc.id }}" class="action-btn btn-toggle">🔄 الحالة</a>
+                <a href="/edit/{{ acc.id }}" class="action-btn btn-edit">✏️ تعديل</a>
+                <a href="/delete/{{ acc.id }}" class="action-btn btn-delete" onclick="return confirm('حذف هذا السيرفر؟');">🗑️ حذف</a>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- قائمة سيرفرات SSH WebSocket -->
+        <div class="section-title" style="color: #3b82f6;">🔐 قائمة سيرفرات SSH WebSocket الأسبوعية</div>
+        {% for ssh in ssh_accounts %}
+        <div class="account-card" style="border-color: #3b82f640;">
+            <div class="account-header">
+                <div>
+                    <span class="account-title" style="color: #3b82f6;">{{ ssh.username }}</span>
+                    <span class="badge-country">{{ ssh.country }}</span>
+                    <span class="badge-carrier">{{ ssh.carrier }}</span>
+                </div>
+                <span class="badge-status-active">{{ ssh.status }}</span>
+            </div>
+            <div class="info-grid">
+                <div>Host: <span>{{ ssh.host }} (Port: {{ ssh.port }})</span></div>
+                <div>User: <span>{{ ssh.ssh_user }}</span></div>
+                <div>Pass: <span>{{ ssh.ssh_pass }}</span></div>
+            </div>
+            <div class="actions-row" style="grid-template-columns: 2fr 1fr 1fr;">
+                <button class="action-btn btn-copy" style="background:#3b82f6; color:#fff;" onclick="navigator.clipboard.writeText(`Host: {{ ssh.host }}\nPort: {{ ssh.port }}\nUser: {{ ssh.ssh_user }}\nPass: {{ ssh.ssh_pass }}\nPayload:\n{{ ssh.payload }}`); alert('تم نسخ بيانات SSH الكاملة!');">
+                    📋 نسخ بيانات SSH كاملة
+                </button>
+                <a href="/toggle-ssh/{{ ssh.id }}" class="action-btn btn-toggle">🔄 الحالة</a>
+                <a href="/delete-ssh/{{ ssh.id }}" class="action-btn btn-delete" onclick="return confirm('حذف هذا السيرفر؟');">🗑️ حذف</a>
             </div>
         </div>
         {% endfor %}
@@ -325,7 +412,7 @@ EDIT_TEMPLATE = '''
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تعديل السيرفر</title>
+    <title>تعديل سيرفر VLESS</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #0f172a; color: #f8fafc; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
@@ -418,10 +505,11 @@ def home():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     accounts = load_accounts()
+    ssh_accounts = load_ssh_accounts()
     active_configs = [acc['config'] for acc in accounts if acc['status'] == 'نشط']
     all_configs = "\\n".join(active_configs)
     creds = load_credentials()
-    return render_template_string(HTML_TEMPLATE, accounts=accounts, all_configs=all_configs, current_user=creds['username'])
+    return render_template_string(HTML_TEMPLATE, accounts=accounts, ssh_accounts=ssh_accounts, all_configs=all_configs, current_user=creds['username'])
 
 @app.route('/sub')
 def subscription():
@@ -435,16 +523,20 @@ def export_json():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     accounts = load_accounts()
-    return Response(json.dumps(accounts, ensure_ascii=False, indent=4), mimetype='application/json')
+    ssh_accounts = load_ssh_accounts()
+    combined = {"vless": accounts, "ssh_websocket": ssh_accounts}
+    return Response(json.dumps(combined, ensure_ascii=False, indent=4), mimetype='application/json')
 
 @app.route('/export/csv')
 def export_csv():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     accounts = load_accounts()
-    csv_data = "ID,Username,Country,IP,Host,UUID,Carrier,Type,Status\n"
+    csv_data = "Type,ID,Username,Country,IP_Host,Carrier,Status\n"
     for acc in accounts:
-        csv_data += f"{acc['id']},{acc['username']},{acc['country']},{acc['server_ip']},{acc['host']},{acc['uuid']},{acc['carrier']},{acc['sub_type']},{acc['status']}\n"
+        csv_data += f"VLESS,{acc['id']},{acc['username']},{acc['country']},{acc['server_ip']},{acc['carrier']},{acc['status']}\n"
+    for ssh in load_ssh_accounts():
+        csv_data += f"SSH,{ssh['id']},{ssh['username']},{ssh['country']},{ssh['host']},{ssh['carrier']},{ssh['status']}\n"
     return Response(csv_data, mimetype='text/csv')
 
 @app.route('/export/txt')
@@ -486,6 +578,38 @@ def add_account():
         save_accounts(accounts)
     return redirect(url_for('home'))
 
+@app.route('/add-ssh', methods=['POST'])
+def add_ssh_account():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    username = request.form.get('username')
+    host = request.form.get('host')
+    port = request.form.get('port', '443')
+    ssh_user = request.form.get('ssh_user')
+    ssh_pass = request.form.get('ssh_pass')
+    payload = request.form.get('payload')
+    country = request.form.get('country', '🇫🇷 فرنسا (Paris)')
+    carrier = request.form.get('carrier', '⚡ زين Zain')
+    
+    if username and host and ssh_user and ssh_pass:
+        ssh_accounts = load_ssh_accounts()
+        new_id = (max([acc['id'] for acc in ssh_accounts]) + 1) if ssh_accounts else 1
+        ssh_accounts.append({
+            "id": new_id,
+            "username": username,
+            "country": country,
+            "host": host,
+            "port": port,
+            "ssh_user": ssh_user,
+            "ssh_pass": ssh_pass,
+            "payload": payload,
+            "carrier": carrier,
+            "status": "نشط"
+        })
+        save_ssh_accounts(ssh_accounts)
+    return redirect(url_for('home'))
+
 @app.route('/delete/<int:acc_id>')
 def delete_account(acc_id):
     if not session.get('logged_in'):
@@ -493,6 +617,15 @@ def delete_account(acc_id):
     accounts = load_accounts()
     accounts = [acc for acc in accounts if acc['id'] != acc_id]
     save_accounts(accounts)
+    return redirect(url_for('home'))
+
+@app.route('/delete-ssh/<int:acc_id>')
+def delete_ssh_account(acc_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    ssh_accounts = load_ssh_accounts()
+    ssh_accounts = [acc for acc in ssh_accounts if acc['id'] != acc_id]
+    save_ssh_accounts(ssh_accounts)
     return redirect(url_for('home'))
 
 @app.route('/toggle/<int:acc_id>')
@@ -504,6 +637,17 @@ def toggle_status(acc_id):
         if acc['id'] == acc_id:
             acc['status'] = "معطل" if acc['status'] == "نشط" else "نشط"
     save_accounts(accounts)
+    return redirect(url_for('home'))
+
+@app.route('/toggle-ssh/<int:acc_id>')
+def toggle_ssh_status(acc_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    ssh_accounts = load_ssh_accounts()
+    for acc in ssh_accounts:
+        if acc['id'] == acc_id:
+            acc['status'] = "معطل" if acc['status'] == "نشط" else "نشط"
+    save_ssh_accounts(ssh_accounts)
     return redirect(url_for('home'))
 
 @app.route('/edit/<int:acc_id>', methods=['GET', 'POST'])
