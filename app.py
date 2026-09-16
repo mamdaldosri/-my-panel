@@ -106,17 +106,50 @@ HTML_TEMPLATE = '''
         }
 
         function updateDefaults() {
+            // تحديث VLESS
             var carrier = document.getElementById("carrierSelect").value;
             var ipInput = document.getElementById("ipInput");
             var hostInput = document.getElementById("hostInput");
 
+            // تحديث SSH
+            var sshCarrier = document.getElementById("sshCarrierSelect").value;
+            var sshHostInput = document.getElementById("sshHostInput");
+            var wssPayloadInput = document.getElementById("wssPayloadInput");
+
+            let currentHost = "";
+            let currentIp = "de1.wssht.to"; // السيرفر الأساسي المعتاد للـ SSH
+
             if (carrier === "STC") {
                 ipInput.value = "172.65.90.47";
                 hostInput.value = "www.pleadcourt.org";
+            } else if (carrier === "Jawwy") {
+                ipInput.value = "172.65.90.47";
+                hostInput.value = "www.jawwy.sa";
             } else if (carrier === "Zain") {
                 ipInput.value = "104.18.8.7";
                 hostInput.value = "speedtest.zain.com";
+            } else if (carrier === "Mobily") {
+                ipInput.value = "104.18.8.7";
+                hostInput.value = "www.mobily.com.sa";
+            } else if (carrier === "Virgin") {
+                ipInput.value = "104.18.8.7";
+                hostInput.value = "www.virginmobile.sa";
             }
+
+            if (sshCarrier === "STC") {
+                currentHost = "www.pleadcourt.org";
+            } else if (sshCarrier === "Jawwy") {
+                currentHost = "www.jawwy.sa";
+            } else if (sshCarrier === "Zain") {
+                currentHost = "speedtest.zain.com";
+            } else if (sshCarrier === "Mobily") {
+                currentHost = "www.mobily.com.sa";
+            } else if (sshCarrier === "Virgin") {
+                currentHost = "www.virginmobile.sa";
+            }
+
+            sshHostInput.value = currentIp;
+            wssPayloadInput.value = `GET wss://${currentHost}/ HTTP/1.1[crlf]Host: ${currentIp}[crlf]Upgrade: Websocket[crlf]Connection: Keep-Alive[crlf][crlf]`;
         }
     </script>
 </head>
@@ -131,12 +164,15 @@ HTML_TEMPLATE = '''
         <form action="/add" method="POST" class="form-card">
             <h3 style="margin-bottom: 10px; font-size: 14px; color: #38bdf8;">+ إضافة سيرفر VLESS جديد</h3>
             <div class="row-group">
-                <div class="form-group"><label>اسم الحساب:</label><input type="text" name="username" class="form-control" value="STC-VIP-1" required></div>
+                <div class="form-group"><label>اسم الحساب:</label><input type="text" name="username" class="form-control" value="VIP-1" required></div>
                 <div class="form-group">
                     <label>الشبكة (الهوست):</label>
                     <select name="carrier" id="carrierSelect" class="form-select" onchange="updateDefaults()">
                         <option value="STC">🇸🇦 سوا STC</option>
+                        <option value="Jawwy">🇸🇦 جوي Jawwy</option>
                         <option value="Zain">⚡ زين Zain</option>
+                        <option value="Mobily">📱 موبايلي Mobily</option>
+                        <option value="Virgin">🟢 فيرجن Virgin</option>
                     </select>
                 </div>
             </div>
@@ -153,19 +189,22 @@ HTML_TEMPLATE = '''
 
         <!-- إضافة SSH WebSocket -->
         <form action="/add-ssh" method="POST" class="form-card" style="border-color: #3b82f6;">
-            <h3 style="margin-bottom: 10px; font-size: 14px; color: #3b82f6;">+ إضافة سيرفر SSH WebSocket</h3>
+            <h3 style="margin-bottom: 10px; font-size: 14px; color: #3b82f6;">+ إضافة سيرفر SSH WebSocket (الأسبوعي)</h3>
             <div class="row-group">
                 <div class="form-group"><label>اسم الحساب:</label><input type="text" name="username" class="form-control" value="SSH-Server-1" required></div>
                 <div class="form-group">
                     <label>الشبكة:</label>
-                    <select name="carrier" class="form-select">
-                        <option value="🇸🇦 سوا STC">🇸🇦 سوا STC</option>
-                        <option value="⚡ زين Zain">⚡ زين Zain</option>
+                    <select name="carrier" id="sshCarrierSelect" class="form-select" onchange="updateDefaults()">
+                        <option value="STC">🇸🇦 سوا STC</option>
+                        <option value="Jawwy">🇸🇦 جوي Jawwy</option>
+                        <option value="Zain">⚡ زين Zain</option>
+                        <option value="Mobily">📱 موبايلي Mobily</option>
+                        <option value="Virgin">🟢 فيرجن Virgin</option>
                     </select>
                 </div>
             </div>
             <div class="row-group">
-                <div class="form-group"><label>Host / IP:</label><input type="text" name="host" class="form-control" value="de1.wssht.to" required></div>
+                <div class="form-group"><label>Host / IP:</label><input type="text" name="host" id="sshHostInput" class="form-control" required></div>
                 <div class="form-group"><label>Port:</label><input type="text" name="port" class="form-control" value="443" required></div>
             </div>
             <div class="row-group">
@@ -174,7 +213,7 @@ HTML_TEMPLATE = '''
             </div>
             <div class="form-group"><label>تاريخ الانتهاء:</label><input type="text" name="expiry" class="form-control" value="22 Sep 2026" required></div>
             <div class="form-group"><label>HTTP Payload:</label><textarea name="payload" class="form-control" rows="2" required>GET / HTTP/1.1[crlf]Host: de1.wssht.to[crlf]Upgrade: websocket[crlf][crlf]</textarea></div>
-            <div class="form-group"><label>WSS Payload:</label><textarea name="wss_payload" class="form-control" rows="2" required>GET wss://www.pleadcourt.org/ HTTP/1.1[crlf]Host: de1.wssht.to[crlf]Upgrade: Websocket[crlf]Connection: Keep-Alive[crlf][crlf]</textarea></div>
+            <div class="form-group"><label>WSS Payload:</label><textarea name="wss_payload" id="wssPayloadInput" class="form-control" rows="2" required></textarea></div>
             <button type="submit" class="btn-primary" style="background: #3b82f6;">حفظ سيرفر SSH</button>
         </form>
 
