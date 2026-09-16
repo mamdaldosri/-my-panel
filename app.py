@@ -1,6 +1,7 @@
-from flask import Flask, render_template_string, request, redirect, url_for, Response, session
+from flask import Flask, render_template_string, request, redirect, url_for, Response, session, send_file
 import json
 import os
+import io
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_change_me_very_secure'
@@ -91,7 +92,7 @@ HTML_TEMPLATE = '''
         .info-grid span { color: #f1f5f9; font-family: monospace; }
         .payload-box { background: #0f172a; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #38bdf8; word-break: break-all; margin-top: 4px; border: 1px solid #334155; }
         .actions-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
-        .action-btn { padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; text-align: center; border: none; text-decoration: none; }
+        .action-btn { padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; text-align: center; border: none; text-decoration: none; display: inline-block; }
         .section-title { color: #38bdf8; font-size: 15px; margin: 20px 0 10px 0; border-bottom: 1px solid #334155; padding-bottom: 5px; }
     </style>
     <script>
@@ -106,18 +107,16 @@ HTML_TEMPLATE = '''
         }
 
         function updateDefaults() {
-            // تحديث VLESS
             var carrier = document.getElementById("carrierSelect").value;
             var ipInput = document.getElementById("ipInput");
             var hostInput = document.getElementById("hostInput");
 
-            // تحديث SSH
             var sshCarrier = document.getElementById("sshCarrierSelect").value;
             var sshHostInput = document.getElementById("sshHostInput");
             var wssPayloadInput = document.getElementById("wssPayloadInput");
 
             let currentHost = "";
-            let currentIp = "de1.wssht.to"; // السيرفر الأساسي المعتاد للـ SSH
+            let currentIp = "de1.wssht.to";
 
             if (carrier === "STC") {
                 ipInput.value = "172.65.90.47";
@@ -250,7 +249,7 @@ HTML_TEMPLATE = '''
                 <div class="payload-box">{{ ssh.wss_payload }}</div>
             </div>
             <div class="actions-row">
-                <button class="action-btn" style="background:#3b82f6; color:#fff;" onclick="navigator.clipboard.writeText(`Host: {{ ssh.host }}\nPort: {{ ssh.port }}\nUser: {{ ssh.ssh_user }}\nPass: {{ ssh.ssh_pass }}\nExpiry: {{ ssh.expiry }}\nWSS Payload:\n{{ ssh.wss_payload }}`); alert('تم نسخ بيانات SSH مع الهوست!');">📋 نسخ الكل</button>
+                <a href="/download-npvt/{{ ssh.id }}" class="action-btn" style="background:#3b82f6; color:#fff; text-decoration:none; line-height:24px;">📥 تحميل ملف npvt</a>
                 <a href="/delete-ssh/{{ ssh.id }}" class="action-btn" style="background:#ef444420; color:#ef4444;" onclick="return confirm('حذف؟');">🗑️ حذف</a>
             </div>
         </div>
@@ -307,6 +306,29 @@ def add_ssh_account():
     })
     save_ssh_accounts(ssh)
     return redirect(url_for('home'))
+
+@app.route('/download-npvt/<int:acc_id>')
+def download_npvt(acc_id):
+    if not session.get('logged_in'): return redirect(url_for('login'))
+    ssh_list = load_ssh_accounts()
+    acc = next((s for s in ssh_list if s['id'] == acc_id), None)
+    if not acc:
+        return "الملف غير موجود", 404
+
+    # تكوين ملف JSON بصيغة NapsternetV (.npvt)
+    npvt_data = {
+        "config_version": 2,
+        "remarks": acc.get('username', 'Server'),
+        "server": acc.get('host'),
+        "server_port": int(acc.get('port', 443)),
+        "ssh_user": acc.get('ssh_user'),
+        "ssh_pass": acc.get('ssh_pass'),
+        "payload": acc.get('wss_payload'),
+        "sni": acc.get('host')
+    }
+
+    file_stream = io.BytesIO(json.dumps(npvt_data, ensure_ascii=False, indent=4).encode('utf-8'))
+    return send_file(file_stream, mimetype='application/json', as_attachment=True, download_name=f"{acc.get('username', 'config')}.npvt")
 
 @app.route('/delete/<int:acc_id>')
 def delete_account(acc_id):
