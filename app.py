@@ -15,10 +15,6 @@ def load_credentials():
             return json.load(f)
     return {"username": "admin", "password": "admin123"}
 
-def save_credentials(creds):
-    with open(CRED_FILE, "w", encoding="utf-8") as f:
-        json.dump(creds, f, ensure_ascii=False, indent=4)
-
 def load_accounts():
     if os.path.exists(DB_FILE):
         with open(DB_FILE, "r", encoding="utf-8") as f:
@@ -46,7 +42,7 @@ LOGIN_TEMPLATE = '''
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>تسجيل الدخول - لوحة السيطرة</title>
+    <title>تسجيل الدخول</title>
     <style>
         body { background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; }
         .login-card { background: #1e293b; padding: 25px; border-radius: 12px; border: 1px solid #334155; width: 100%; max-width: 380px; text-align: right; }
@@ -75,7 +71,7 @@ HTML_TEMPLATE = '''
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم الشاملة للهوستات والسيرفرات</title>
+    <title>لوحة التحكم الشاملة</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
         body { background-color: #0f172a; color: #f8fafc; padding: 15px; }
@@ -108,9 +104,23 @@ HTML_TEMPLATE = '''
             });
             document.getElementById("uuidInput").value = uuid;
         }
+
+        function updateDefaults() {
+            var carrier = document.getElementById("carrierSelect").value;
+            var ipInput = document.getElementById("ipInput");
+            var hostInput = document.getElementById("hostInput");
+
+            if (carrier === "STC") {
+                ipInput.value = "172.65.90.47";
+                hostInput.value = "www.pleadcourt.org";
+            } else if (carrier === "Zain") {
+                ipInput.value = "104.18.8.7";
+                hostInput.value = "speedtest.zain.com";
+            }
+        }
     </script>
 </head>
-<body>
+<body onload="updateDefaults()">
     <div class="container">
         <div class="header">
             <h1>لوحة إدارة الهوستات والسيرفرات</h1>
@@ -121,20 +131,18 @@ HTML_TEMPLATE = '''
         <form action="/add" method="POST" class="form-card">
             <h3 style="margin-bottom: 10px; font-size: 14px; color: #38bdf8;">+ إضافة سيرفر VLESS جديد</h3>
             <div class="row-group">
-                <div class="form-group"><label>اسم الحساب:</label><input type="text" name="username" class="form-control" placeholder="مثال: STC-VIP-1" required></div>
+                <div class="form-group"><label>اسم الحساب:</label><input type="text" name="username" class="form-control" value="STC-VIP-1" required></div>
                 <div class="form-group">
                     <label>الشبكة (الهوست):</label>
-                    <select name="carrier" class="form-select">
-                        <option value="🇸🇦 سوا STC">🇸🇦 سوا STC</option>
-                        <option value="⚡ زين Zain">⚡ زين Zain</option>
-                        <option value="📱 موبايلي Mobily">📱 موبايلي Mobily</option>
-                        <option value="🇸🇦 جوي Jawwy">🇸🇦 جوي Jawwy</option>
+                    <select name="carrier" id="carrierSelect" class="form-select" onchange="updateDefaults()">
+                        <option value="STC">🇸🇦 سوا STC</option>
+                        <option value="Zain">⚡ زين Zain</option>
                     </select>
                 </div>
             </div>
             <div class="row-group">
-                <div class="form-group"><label>عنوان السيرفر (IP):</label><input type="text" name="ip" class="form-control" placeholder="مثال: 172.65.90.47" required></div>
-                <div class="form-group"><label>الهوست (Host / Bug):</label><input type="text" name="host" class="form-control" placeholder="مثال: www.pleadcourt.org" required></div>
+                <div class="form-group"><label>عنوان السيرفر (IP):</label><input type="text" name="ip" id="ipInput" class="form-control" required></div>
+                <div class="form-group"><label>الهوست (Host / Bug):</label><input type="text" name="host" id="hostInput" class="form-control" required></div>
             </div>
             <div class="form-group">
                 <label>المعرّف (UUID): <button type="button" onclick="generateUUID()" style="background:#334155; color:#38bdf8; border:none; padding:2px 6px; border-radius:4px; float:left; cursor:pointer;">توليد</button></label>
@@ -145,7 +153,7 @@ HTML_TEMPLATE = '''
 
         <!-- إضافة SSH WebSocket -->
         <form action="/add-ssh" method="POST" class="form-card" style="border-color: #3b82f6;">
-            <h3 style="margin-bottom: 10px; font-size: 14px; color: #3b82f6;">+ إضافة سيرفر SSH WebSocket (مع الهوستات)</h3>
+            <h3 style="margin-bottom: 10px; font-size: 14px; color: #3b82f6;">+ إضافة سيرفر SSH WebSocket</h3>
             <div class="row-group">
                 <div class="form-group"><label>اسم الحساب:</label><input type="text" name="username" class="form-control" value="SSH-Server-1" required></div>
                 <div class="form-group">
@@ -153,7 +161,6 @@ HTML_TEMPLATE = '''
                     <select name="carrier" class="form-select">
                         <option value="🇸🇦 سوا STC">🇸🇦 سوا STC</option>
                         <option value="⚡ زين Zain">⚡ زين Zain</option>
-                        <option value="📱 موبايلي Mobily">📱 موبايلي Mobily</option>
                     </select>
                 </div>
             </div>
@@ -167,7 +174,7 @@ HTML_TEMPLATE = '''
             </div>
             <div class="form-group"><label>تاريخ الانتهاء:</label><input type="text" name="expiry" class="form-control" value="22 Sep 2026" required></div>
             <div class="form-group"><label>HTTP Payload:</label><textarea name="payload" class="form-control" rows="2" required>GET / HTTP/1.1[crlf]Host: de1.wssht.to[crlf]Upgrade: websocket[crlf][crlf]</textarea></div>
-            <div class="form-group"><label>WSS Payload (مع هوست الثغرة):</label><textarea name="wss_payload" class="form-control" rows="2" required>GET wss://www.pleadcourt.org/ HTTP/1.1[crlf]Host: de1.wssht.to[crlf]Upgrade: Websocket[crlf]Connection: Keep-Alive[crlf][crlf]</textarea></div>
+            <div class="form-group"><label>WSS Payload:</label><textarea name="wss_payload" class="form-control" rows="2" required>GET wss://www.pleadcourt.org/ HTTP/1.1[crlf]Host: de1.wssht.to[crlf]Upgrade: Websocket[crlf]Connection: Keep-Alive[crlf][crlf]</textarea></div>
             <button type="submit" class="btn-primary" style="background: #3b82f6;">حفظ سيرفر SSH</button>
         </form>
 
@@ -216,7 +223,7 @@ HTML_TEMPLATE = '''
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    creds = load_credentials()
+    creds = {"username": "admin", "password": "admin123"}
     if request.method == 'POST':
         if request.form.get('username') == creds['username'] and request.form.get('password') == creds['password']:
             session['logged_in'] = True
