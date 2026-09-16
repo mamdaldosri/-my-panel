@@ -60,10 +60,11 @@ TEMPLATE = """
         .profile-card {
             background: #030712; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; margin-bottom: 10px;
         }
-        .profile-actions { display: flex; gap: 5px; margin-top: 8px; }
-        .btn-sm { padding: 5px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; border: none; text-decoration: none; text-align: center; }
+        .profile-actions { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+        .btn-sm { padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; border: none; text-decoration: none; text-align: center; }
         .btn-copy { background: rgba(56, 189, 248, 0.2); color: var(--accent-cyan); flex: 1; }
         .btn-download { background: rgba(52, 211, 153, 0.2); color: var(--accent-green); flex: 1; }
+        .btn-share { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); flex: 1; }
         .btn-delete { background: rgba(244, 63, 94, 0.2); color: var(--accent-red); }
         .badge { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); padding: 2px 6px; border-radius: 4px; font-size: 10px; }
     </style>
@@ -83,8 +84,8 @@ TEMPLATE = """
                         <select name="network">
                             <option value="STC">STC (سوا)</option>
                             <option value="Mobily">Mobily (موبايلي)</option>
-                            <option value="Jawwy">Jawwy (جوي)</option>
                             <option value="Zain">Zain (زين)</option>
+                            <option value="Axiom/Asia">أسياسيل / آسيا (Asia)</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -128,7 +129,8 @@ TEMPLATE = """
                     {{ p.config }}
                 </div>
                 <div class="profile-actions">
-                    <button class="btn-sm btn-copy" onclick="navigator.clipboard.writeText('{{ p.config }}'); alert('تم النسخ!');">📋 نسخ</button>
+                    <button class="btn-sm btn-copy" onclick="navigator.clipboard.writeText('{{ p.config }}'); alert('تم نسخ الكود!');">📋 نسخ</button>
+                    <button class="btn-sm btn-share" onclick="navigator.clipboard.writeText(window.location.origin + '/download/{{ p.id }}'); alert('تم نسخ رابط التحميل للمشاركة!');">🔗 مشاركة الرابط</button>
                     <a class="btn-sm btn-download" href="/download/{{ p.id }}">💾 تحميل</a>
                     <form action="/delete/{{ p.id }}" method="POST" style="margin:0;"><button type="submit" class="btn-sm btn-delete">🗑️ حذف</button></form>
                 </div>
