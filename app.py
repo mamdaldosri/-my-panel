@@ -1,14 +1,13 @@
-from flask import Flask, render_template_string, request, redirect, url_for, session, send_file
+from flask import Flask, render_template_string, request, redirect, url_for, session
 import json
 import os
-import io
+import base64
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_change_me_very_secure'
 
 DB_FILE = "database.json"
 SSH_DB_FILE = "ssh_database.json"
-CRED_FILE = "credentials.json"
 
 def load_accounts():
     if os.path.exists(DB_FILE):
@@ -82,7 +81,7 @@ HTML_TEMPLATE = '''
         .btn-primary { background: #06b6d4; color: #fff; border: none; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 5px; }
         .account-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #38bdf8; }
         .badge-carrier { background: #3b82f620; color: #3b82f6; border: 1px solid #3b82f640; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
-        .info-grid { font-size: 12px; color: #94a3b8; line-height: 1.6; }
+        .info-grid { font-size: 12px; color: #94a3b8; line-height: 1.6; word-break: break-all; }
         .info-grid span { color: #f1f5f9; font-family: monospace; }
         .payload-box { background: #0f172a; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #38bdf8; word-break: break-all; margin-top: 4px; border: 1px solid #334155; }
         .actions-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
@@ -144,6 +143,14 @@ HTML_TEMPLATE = '''
             sshHostInput.value = currentIp;
             wssPayloadInput.value = `GET wss://${currentHost}/ HTTP/1.1[crlf]Host: ${currentIp}[crlf]Upgrade: Websocket[crlf]Connection: Keep-Alive[crlf][crlf]`;
         }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('تم نسخ الرابط/الإعدادات بنجاح!');
+            }, function(err) {
+                alert('فشل النسخ: ' + err);
+            });
+        }
     </script>
 </head>
 <body onload="updateDefaults()">
@@ -180,7 +187,7 @@ HTML_TEMPLATE = '''
         </form>
 
         <form action="/add-ssh" method="POST" class="form-card" style="border-color: #3b82f6;">
-            <h3 style="margin-bottom: 10px; font-size: 14px; color: #3b82f6;">+ إضافة سيرفر SSH WebSocket (الأسبوعي)</h3>
+            <h3 style="margin-bottom: 10px; font-size: 14px; color: #3b82f6;">+ إضافة سيرفر SSH WebSocket</h3>
             <div class="row-group">
                 <div class="form-group"><label>اسم الحساب:</label><input type="text" name="username" class="form-control" value="SSH-Server-1" required></div>
                 <div class="form-group">
@@ -216,12 +223,11 @@ HTML_TEMPLATE = '''
                 <span style="font-size:11px; color:#94a3b8;">VLESS</span>
             </div>
             <div class="info-grid">
-                <div>IP: <span>{{ acc.server_ip }}</span></div>
-                <div>Host: <span>{{ acc.host }}</span></div>
+                <div>رابط VLESS: <span>vless://{{ acc.uuid }}@{{ acc.server_ip }}:443?encryption=none&security=tls&type=ws&host={{ acc.host }}&path=%2fvless#{{ acc.username }}</span></div>
             </div>
             <div class="actions-row">
-                <a href="/download-json/{{ acc.id }}" class="action-btn" style="background:#06b6d4; color:#fff; text-decoration:none; line-height:24px;">📥 تحميل ملف npvt</a>
-                <a href="/delete/{{ acc.id }}" class="action-btn" style="background:#ef444420; color:#ef4444;" onclick="return confirm('حذف؟');">🗑️ حذف</a>
+                <button onclick="copyText('vless://{{ acc.uuid }}@{{ acc.server_ip }}:443?encryption=none&security=tls&type=ws&host={{ acc.host }}&path=%2fvless#{{ acc.username }}')" class="action-btn" style="background:#06b6d4; color:#fff;">📋 نسخ رابط VLESS</button>
+                <a href="/delete/{{ acc.id }}" class="action-btn" style="background:#ef444420; color:#ef4444; line-height:24px;" onclick="return confirm('حذف؟');">🗑️ حذف</a>
             </div>
         </div>
         {% endfor %}
@@ -233,15 +239,13 @@ HTML_TEMPLATE = '''
                 <span style="font-size:11px; color:#94a3b8;">SSH WSS</span>
             </div>
             <div class="info-grid">
-                <div>Host: <span>{{ ssh.host }}</span> | Port: <span>{{ ssh.port }}</span></div>
-                <div>User: <span>{{ ssh.ssh_user }}</span> | Pass: <span>{{ ssh.ssh_pass }}</span></div>
-                <div>الانتهاء: <span style="color:#f59e0b;">{{ ssh.expiry }}</span></div>
-                <div style="margin-top:4px;">WSS Payload:</div>
+                <div>Host: <span>{{ ssh.host }}:{{ ssh.port }}</span> | User: <span>{{ ssh.ssh_user }}</span></div>
+                <div style="margin-top:4px;">Payload:</div>
                 <div class="payload-box">{{ ssh.wss_payload }}</div>
             </div>
             <div class="actions-row">
-                <a href="/download-npvt/{{ ssh.id }}" class="action-btn" style="background:#3b82f6; color:#fff; text-decoration:none; line-height:24px;">📥 تحميل ملف npvt</a>
-                <a href="/delete-ssh/{{ ssh.id }}" class="action-btn" style="background:#ef444420; color:#ef4444;" onclick="return confirm('حذف؟');">🗑️ حذف</a>
+                <button onclick="copyText('Host: {{ ssh.host }}\\nPort: {{ ssh.port }}\\nUser: {{ ssh.ssh_user }}\\nPass: {{ ssh.ssh_pass }}\\nPayload:\\n{{ ssh.wss_payload }}')" class="action-btn" style="background:#3b82f6; color:#fff;">📋 نسخ بيانات SSH</button>
+                <a href="/delete-ssh/{{ ssh.id }}" class="action-btn" style="background:#ef444420; color:#ef4444; line-height:24px;" onclick="return confirm('حذف؟');">🗑️ حذف</a>
             </div>
         </div>
         {% endfor %}
@@ -295,71 +299,6 @@ def add_ssh_account():
     })
     save_ssh_accounts(ssh)
     return redirect(url_for('home'))
-
-@app.route('/download-json/<int:acc_id>')
-def download_json(acc_id):
-    if not session.get('logged_in'): return redirect(url_for('login'))
-    accounts = load_accounts()
-    acc = next((s for s in accounts if s['id'] == acc_id), None)
-    if not acc: return "الملف غير موجود", 404
-
-    json_structure = {
-        "remarks": acc.get('username', 'VIP-Server'),
-        "log": {"loglevel": "warning"},
-        "inbounds": [{
-            "tag": "socks", "port": 10808, "protocol": "socks",
-            "settings": {"auth": "noauth", "udp": True, "userLevel": 8},
-            "sniffing": {"enabled": True, "destOverride": ["http", "tls"], "routeOnly": False}
-        }],
-        "outbounds": [
-            {
-                "tag": "proxy", "protocol": "vless",
-                "settings": {"vnext": [{"address": acc.get('server_ip'), "port": 443, "users": [{"id": acc.get('uuid'), "level": 8, "encryption": "none"}]}]},
-                "streamSettings": {
-                    "network": "ws", "security": "tls",
-                    "wsSettings": {"path": "/vless", "headers": {"Host": acc.get('host')}},
-                    "tlsSettings": {"allowInsecure": True, "serverName": acc.get('host'), "show": False}
-                },
-                "mux": {"enabled": False, "concurrency": -1, "xudpConcurrency": 8, "xudpProxyUDP443": ""}
-            },
-            {"tag": "direct", "protocol": "freedom", "settings": {"domainStrategy": "UseIP"}, "mux": {"enabled": False, "concurrency": 8, "xudpConcurrency": 8, "xudpProxyUDP443": ""}},
-            {"tag": "block", "protocol": "blackhole", "settings": {"response": {"type": "http"}}, "mux": {"enabled": False, "concurrency": 8, "xudpConcurrency": 8, "xudpProxyUDP443": ""}}
-        ],
-        "dns": {"servers": ["1.1.1.1"], "hosts": {"domain:google.com": "8.8.8.8"}}
-    }
-
-    file_stream = io.BytesIO(json.dumps(json_structure, ensure_ascii=False, indent=4).encode('utf-8'))
-    return send_file(file_stream, mimetype='application/octet-stream', as_attachment=True, download_name=f"{acc.get('username', 'config')}.npvt")
-
-@app.route('/download-npvt/<int:acc_id>')
-def download_npvt(acc_id):
-    if not session.get('logged_in'): return redirect(url_for('login'))
-    ssh_list = load_ssh_accounts()
-    acc = next((s for s in ssh_list if s['id'] == acc_id), None)
-    if not acc: return "الملف غير موجود", 404
-
-    json_structure = {
-        "remarks": acc.get('username', 'SSH-Server'),
-        "log": {"loglevel": "warning"},
-        "inbounds": [{"tag": "socks", "port": 10808, "protocol": "socks", "settings": {"auth": "noauth", "udp": True, "userLevel": 8}}],
-        "outbounds": [
-            {
-                "tag": "proxy", "protocol": "vless",
-                "settings": {"vnext": [{"address": acc.get('host'), "port": int(acc.get('port', 443)), "users": [{"id": acc.get('ssh_user'), "level": 8, "encryption": "none"}]}]},
-                "streamSettings": {
-                    "network": "ws", "security": "tls",
-                    "wsSettings": {"path": "/", "headers": {"Host": acc.get('host')}},
-                    "tlsSettings": {"allowInsecure": True, "serverName": acc.get('host')}
-                }
-            },
-            {"tag": "direct", "protocol": "freedom"},
-            {"tag": "block", "protocol": "blackhole"}
-        ],
-        "ssh": {"username": acc.get('ssh_user'), "password": acc.get('ssh_pass'), "payload": acc.get('wss_payload')}
-    }
-
-    file_stream = io.BytesIO(json.dumps(json_structure, ensure_ascii=False, indent=4).encode('utf-8'))
-    return send_file(file_stream, mimetype='application/octet-stream', as_attachment=True, download_name=f"{acc.get('username', 'config')}.npvt")
 
 @app.route('/delete/<int:acc_id>')
 def delete_account(acc_id):
