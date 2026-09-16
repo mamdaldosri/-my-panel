@@ -54,7 +54,6 @@ TEMPLATE = """
         input, select, textarea {
             width: 100%; padding: 8px; background: #030712; border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; font-size: 12px;
         }
-        textarea { font-family: monospace; height: 50px; color: var(--accent-cyan); }
         .action-btn {
             background: #2563eb; color: white; padding: 10px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 13px; font-weight: bold; margin-top: 5px;
         }
@@ -166,8 +165,6 @@ def delete_profile(profile_id):
     global SAVED_PROFILES
     SAVED_PROFILES = [p for p in SAVED_PROFILES if p['id'] != profile_id]
     return redirect(url_for('index'))
-
-@app.render if hasattr(app, 'render') else None # Dummy placeholder
 
 @app.route('/download/<profile_id>')
 def download_profile(profile_id):
