@@ -1,10 +1,11 @@
-from flask import Flask, render_template_string, request, redirect, url_for
+from flask import Flask, render_template_string, request, redirect, url_for, Response
 import uuid
+import json
 import os
 
 app = Flask(__name__)
 
-DEFAULT_WORKER = "crimson-scene-52b4.mamdaldosri.workers.dev"
+# قائمة لحفظ الملفات المحدثة
 SAVED_PROFILES = []
 
 TEMPLATE = """
@@ -72,20 +73,20 @@ TEMPLATE = """
 <body>
     <div class="container">
         <div class="header">
-            <h1>NEXUS-X // ISP MATRIX</h1>
+            <h1>NEXUS-X // ISP MATRIX PRO</h1>
         </div>
 
         <div class="panel-card">
-            <div class="section-title">+ إصدار ملف بروكسي جديد</div>
+            <div class="section-title">+ إصدار ملف بروكسي وإعدادات حقيقية</div>
             <form method="POST" action="/add">
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>الشبكة</label>
+                        <label>الشبكة المستهدفة</label>
                         <select name="network">
                             <option value="STC">STC (سوا)</option>
                             <option value="Mobily">Mobily (موبايلي)</option>
                             <option value="Zain">Zain (زين)</option>
-                            <option value="Axiom/Asia">أسياسيل / آسيا (Asia)</option>
+                            <option value="Asia">آسيا / أسياسيل (Asia)</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -94,7 +95,7 @@ TEMPLATE = """
                             <option value="10 GB">10 قيقا</option>
                             <option value="50 GB">50 قيقا</option>
                             <option value="100 GB">100 قيقا</option>
-                            <option value="∞ غير محدود">♾️ غير محدود</option>
+                            <option value="Unlimited">♾️ غير محدود</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -106,18 +107,18 @@ TEMPLATE = """
                         <input type="text" name="uuid_val" value="{{ default_uuid }}" required>
                     </div>
                     <div class="form-group full">
-                        <label>رابط الوكر (Worker Domain)</label>
-                        <input type="text" name="bug_host" value="{{ worker_domain }}" required>
+                        <label>رابط الوكر الصحيح (ضع رابطك الفعلي هنا)</label>
+                        <input type="text" name="bug_host" placeholder="example.workers.dev" required>
                     </div>
                 </div>
-                <button type="submit" class="action-btn">🚀 إصدار وحفظ الملف</button>
+                <button type="submit" class="action-btn">🚀 إصدار وتوليد الملف الآن</button>
             </form>
         </div>
 
         <div class="panel-card">
             <div class="section-title">📁 الملفات النشطة ({{ profiles|length }})</div>
             {% if not profiles %}
-            <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 10px;">لا توجد ملفات حالياً</div>
+            <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 10px;">لا توجد ملفات مصدرة حالياً</div>
             {% endif %}
             {% for p in profiles %}
             <div class="profile-card">
@@ -125,13 +126,13 @@ TEMPLATE = """
                     <div><strong style="color: var(--accent-cyan);">{{ p.name }}</strong> <span class="badge">{{ p.network }}</span> <span style="color: var(--accent-yellow); font-size: 10px;">{{ p.data_limit }}</span></div>
                     <span style="color: var(--accent-green); font-size: 11px;">نشط</span>
                 </div>
-                <div style="font-family: monospace; font-size: 10px; color: var(--text-muted); word-break: break-all; background: #000; padding: 5px; border-radius: 4px;">
-                    {{ p.config }}
+                <div style="font-family: monospace; font-size: 10px; color: var(--text-muted); word-break: break-all; background: #000; padding: 6px; border-radius: 4px; max-height: 60px; overflow-y: auto;">
+                    {{ p.vless_link }}
                 </div>
                 <div class="profile-actions">
-                    <button class="btn-sm btn-copy" onclick="navigator.clipboard.writeText('{{ p.config }}'); alert('تم نسخ الكود!');">📋 نسخ</button>
-                    <button class="btn-sm btn-share" onclick="navigator.clipboard.writeText(window.location.origin + '/download/{{ p.id }}'); alert('تم نسخ رابط التحميل للمشاركة!');">🔗 مشاركة الرابط</button>
-                    <a class="btn-sm btn-download" href="/download/{{ p.id }}">💾 تحميل</a>
+                    <button class="btn-sm btn-copy" onclick="navigator.clipboard.writeText(`{{ p.vless_link }}`); alert('تم نسخ رابط الـ VLESS بنجاح!');">📋 نسخ الرابط</button>
+                    <button class="btn-sm btn-share" onclick="navigator.clipboard.writeText(window.location.origin + '/download/{{ p.id }}'); alert('تم نسخ رابط التحميل!');">🔗 مشاركة الرابط</button>
+                    <a class="btn-sm btn-download" href="/download/{{ p.id }}">💾 تحميل الملف</a>
                     <form action="/delete/{{ p.id }}" method="POST" style="margin:0;"><button type="submit" class="btn-sm btn-delete">🗑️ حذف</button></form>
                 </div>
             </div>
@@ -144,7 +145,7 @@ TEMPLATE = """
 
 @app.route('/')
 def index():
-    return render_template_string(TEMPLATE, default_uuid=str(uuid.uuid4()), worker_domain=DEFAULT_WORKER, profiles=SAVED_PROFILES)
+    return render_template_string(TEMPLATE, default_uuid=str(uuid.uuid4()), profiles=SAVED_PROFILES)
 
 @app.route('/add', methods=['POST'])
 def add_profile():
@@ -152,13 +153,22 @@ def add_profile():
     data_limit = request.form.get('data_limit', '100 GB')
     name = request.form.get('name', 'VIP')
     user_uuid = request.form.get('uuid_val', str(uuid.uuid4()))
-    bug_host = request.form.get('bug_host', DEFAULT_WORKER)
+    bug_host = request.form.get('bug_host', '').strip()
     
-    config_str = f"vless://{user_uuid}@{bug_host}:443?encryption=none&security=tls&sni={bug_host}&type=ws&path=%2F#{network}-{name}-{data_limit}"
+    # تنظيف رابط الهوست لو كتبه مع https
+    if "://" in bug_host:
+        bug_host = bug_host.split("://")[1].split("/")[0]
+
+    # بناء رابط الـ VLESS الصحيح والمتكامل
+    vless_link = f"vless://{user_uuid}@{bug_host}:443?encryption=none&security=tls&sni={bug_host}&type=ws&path=%2F#{network}-{name}-{data_limit}"
     
     profile_id = str(uuid.uuid4())[:8]
     SAVED_PROFILES.append({
-        'id': profile_id, 'name': name, 'network': network, 'data_limit': data_limit, 'config': config_str
+        'id': profile_id, 
+        'name': name, 
+        'network': network, 
+        'data_limit': data_limit, 
+        'vless_link': vless_link
     })
     return redirect(url_for('index'))
 
@@ -172,7 +182,11 @@ def delete_profile(profile_id):
 def download_profile(profile_id):
     p = next((item for item in SAVED_PROFILES if item['id'] == profile_id), None)
     if not p: return "الملف غير موجود", 404
-    return p['config'], 200, {'Content-Type': 'text/plain; charset=utf-8', 'Content-Disposition': f'attachment; filename={p["name"]}.txt'}
+    return Response(
+        p['vless_link'],
+        mimetype="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f"attachment;filename={p['name']}_{p['network']}.txt"}
+    )
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
